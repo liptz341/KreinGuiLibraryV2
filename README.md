@@ -13,22 +13,26 @@
 - Button, toggle, slider, textbox, and paragraph controls.
 - Callback hooks and basic control methods (`SetValue`, `SetText`, `SetVisible`, `Destroy`).
 
-## Installation
+## Installation (loadstring)
 
-1. Place `KreinGuiV2_Library.lua` in a `ModuleScript` named `KreinGuiLibraryV2`.
-2. Put a `LocalScript` alongside it, or in another client-side location that can access the ModuleScript.
-3. Require the module and create a window as shown below.
+For environments that support `loadstring` and `game:HttpGet`, load the library directly from the raw GitHub file:
 
 ```lua
-local Library = require(script.Parent:WaitForChild("KreinGuiLibraryV2"))
+local Library = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/liptz341/KreinGuiLibraryV2/refs/heads/main/KreinGuiV2_Library.lua"
+))()
 ```
 
-If you use a hosted raw file in an environment that explicitly supports `loadstring` and `HttpGet`, load it using that environment's supported method. These functions are not available in ordinary Roblox experience scripts.
+Use this at the top of your client-side test script, then create the window and its components. The URL points to the repository's `main` branch, so it loads the latest committed version at that path.
+
+**Compatibility note:** `loadstring` and `HttpGet` are not enabled in ordinary Roblox experience scripts. This installation method only works in environments that explicitly provide them. For a normal Roblox Studio experience, put the library in a `ModuleScript` and use `require` from a `LocalScript` instead.
 
 ## Quick start
 
 ```lua
-local Library = require(script.Parent:WaitForChild("KreinGuiLibraryV2"))
+local Library = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/liptz341/KreinGuiLibraryV2/refs/heads/main/KreinGuiV2_Library.lua"
+))()
 
 local Window = Library:CreateWindow({
     Title = "Krein Demo",
