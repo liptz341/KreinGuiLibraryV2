@@ -5301,61 +5301,15 @@ local function buildOriginalGui(parentGui, options)
     	end
     	
     	closeBtn.MouseButton1Click:Connect(function()
-    		if closing then return end
-    		closing = true
-    	
-    		if minimized then
-    			minimized = false
-    			busy = false
-    			sidebarHolder.Visible = true
-    			contentArea.Visible = true
-    			main.Size = OPEN_SIZE
-    		end
-    	
-    		local overlay, card, sub, keep, parts = buildCloseOverlay()
-    	
-    		local cancelled = false
-    		local function cancelClose()
-    			if cancelled then return end
-    			cancelled = true
-    			closing = false
-    			for _, p in ipairs(parts) do
-    				if p:IsA("TextLabel") then
-    					TS:Create(p, TweenInfo.new(0.16), {TextTransparency = 1}):Play()
-    				elseif p:IsA("UIStroke") then
-    					TS:Create(p, TweenInfo.new(0.16), {Transparency = 1}):Play()
-    				elseif p:IsA("Frame") then
-    					TS:Create(p, TweenInfo.new(0.16), {BackgroundTransparency = 1}):Play()
-    				elseif p:IsA("TextButton") then
-    					TS:Create(p, TweenInfo.new(0.16), {BackgroundTransparency = 1}):Play()
-    				end
-    			end
-    			task.wait(0.2)
-    			overlay:Destroy()
-    		end
-    	
-    		overlay.MouseButton1Click:Connect(cancelClose)
-    		keep.MouseButton1Click:Connect(cancelClose)
-    	
-    		for i = 3, 1, -1 do
-    			if cancelled then return end
-    			sub.Text = "Closing in " .. i .. " second" .. (i == 1 and "" or "s")
-    			task.wait(1)
-    		end
-    		if cancelled then return end
-    	
-    		local flash = Instance.new("Frame", SG)
-    		flash.Size = UDim2.new(1, 0, 1, 0)
-    		flash.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    		flash.BackgroundTransparency = 1
-    		flash.BorderSizePixel = 0
-    		flash.ZIndex = 300
-    		TS:Create(flash, TweenInfo.new(0.12), {BackgroundTransparency = 0}):Play()
-    		task.wait(0.16)
-    		SG:Destroy()
-    	end)
-    	
-    	-- ===== collapsible submenus =====
+		-- Closing is immediate and never restores a minimized window first.
+		if closing then return end
+		closing = true
+		if SG and SG.Parent then
+			SG:Destroy()
+		end
+	end)
+
+	-- ===== collapsible submenus =====
     	local function hookSubmenu(sm)
     		local head = sm:FindFirstChild("HeaderBtn")
     		local inner = sm:FindFirstChild("InnerList")
@@ -5497,6 +5451,113 @@ function KreinGuiLibraryV2:CreateWindow(options)
             Submenu = G2L["51"],
         },
     }, KreinGuiLibraryV2Window)
+
+    -- Intro animation: keep the main window hidden until the intro finishes.
+    main.Visible = false
+    local TweenService = game:GetService("TweenService")
+    local intro = Instance.new("Frame")
+    intro.Name = "KreinIntro"
+    intro.AnchorPoint = Vector2.new(0.5, 0.5)
+    intro.Position = UDim2.fromScale(0.5, 0.5)
+    intro.Size = UDim2.fromOffset(200, 150)
+    intro.BackgroundColor3 = Color3.fromRGB(24, 24, 30)
+    intro.BackgroundTransparency = 1
+    intro.BorderSizePixel = 0
+    intro.ZIndex = 500
+    intro.Parent = screenGui
+    local introCorner = Instance.new("UICorner")
+    introCorner.CornerRadius = UDim.new(0, 12)
+    introCorner.Parent = intro
+    local introStroke = Instance.new("UIStroke")
+    introStroke.Color = Color3.fromRGB(80, 190, 130)
+    introStroke.Thickness = 1.5
+    introStroke.Transparency = 1
+    introStroke.Parent = intro
+
+    local letters = {}
+    for i = 1, 5 do
+        local letter = Instance.new("TextLabel")
+        letter.Name = "Letter" .. i
+        letter.BackgroundTransparency = 1
+        letter.Size = UDim2.fromOffset(34, 42)
+        letter.Position = UDim2.new(0.5, -85 + (i - 1) * 34, 0, 30)
+        letter.Font = Enum.Font.GothamBold
+        letter.Text = string.sub("KREIN", i, i)
+        letter.TextColor3 = Color3.fromRGB(245, 245, 250)
+        letter.TextSize = 29
+        letter.TextTransparency = 1
+        letter.ZIndex = 501
+        letter.Parent = intro
+        table.insert(letters, letter)
+    end
+
+    local loader = Instance.new("TextLabel")
+    loader.Name = "LoadingSpinner"
+    loader.BackgroundTransparency = 1
+    loader.AnchorPoint = Vector2.new(0.5, 0.5)
+    loader.Position = UDim2.new(0.5, 0, 0, 100)
+    loader.Size = UDim2.fromOffset(34, 34)
+    loader.Font = Enum.Font.Gotham
+    loader.Text = "◌"
+    loader.TextColor3 = Color3.fromRGB(80, 190, 130)
+    loader.TextSize = 31
+    loader.TextTransparency = 1
+    loader.ZIndex = 501
+    loader.Parent = intro
+
+    local introFade = TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    TweenService:Create(intro, introFade, {BackgroundTransparency = 0.08}):Play()
+    TweenService:Create(introStroke, introFade, {Transparency = 0.15}):Play()
+    task.spawn(function()
+        for _, letter in ipairs(letters) do
+            TweenService:Create(letter, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+            task.wait(0.12)
+        end
+        TweenService:Create(loader, introFade, {TextTransparency = 0}):Play()
+        local spin = TweenService:Create(loader, TweenInfo.new(0.65, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Rotation = 360})
+        spin:Play()
+        task.wait(1.15)
+        spin:Cancel()
+
+        -- Capture and fade every supported GUI transparency together.
+        local fadeItems = {}
+        local function captureFade(obj, property)
+            local ok, value = pcall(function() return obj[property] end)
+            if ok and type(value) == "number" then
+                table.insert(fadeItems, {object = obj, property = property, base = value})
+                pcall(function() obj[property] = 1 end)
+            end
+        end
+        captureFade(main, "BackgroundTransparency")
+        for _, obj in ipairs(main:GetDescendants()) do
+            if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+                captureFade(obj, "TextTransparency")
+                if obj:IsA("TextButton") or obj:IsA("TextBox") then captureFade(obj, "BackgroundTransparency") end
+            elseif obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
+                captureFade(obj, "ImageTransparency")
+                captureFade(obj, "BackgroundTransparency")
+            elseif obj:IsA("Frame") or obj:IsA("ScrollingFrame") then
+                captureFade(obj, "BackgroundTransparency")
+            elseif obj:IsA("UIStroke") then
+                captureFade(obj, "Transparency")
+            end
+        end
+        main.Visible = true
+        local fadeInInfo = TweenInfo.new(0.34, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        for _, item in ipairs(fadeItems) do
+            pcall(function()
+                TweenService:Create(item.object, fadeInInfo, {[item.property] = item.base}):Play()
+            end)
+        end
+        TweenService:Create(intro, fadeInInfo, {BackgroundTransparency = 1}):Play()
+        TweenService:Create(introStroke, fadeInInfo, {Transparency = 1}):Play()
+        for _, letter in ipairs(letters) do
+            TweenService:Create(letter, fadeInInfo, {TextTransparency = 1}):Play()
+        end
+        TweenService:Create(loader, fadeInInfo, {TextTransparency = 1}):Play()
+        task.wait(0.38)
+        if screenGui and screenGui.Parent then intro:Destroy() end
+    end)
 
     -- No demo tabs, sections, or controls are placed in the active window here.
     return window
