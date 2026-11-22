@@ -4655,47 +4655,79 @@ local function buildOriginalGui(parentGui, options)
     		end
     	end)
     	
-    	-- ---------- drag ----------
-    	local dragging = false
-    	local dragStart, startPos
-    	
-    	local function overLight(pos)
-    		for _, b in ipairs({closeBtn, minBtn}) do
-    			local ap, as = b.AbsolutePosition, b.AbsoluteSize
-    			if pos.X >= ap.X - 4 and pos.X <= ap.X + as.X + 4 and pos.Y >= ap.Y - 6 and pos.Y <= ap.Y + as.Y + 6 then
-    				return true
-    			end
-    		end
-    		return false
-    	end
-    	
-    	titleBar.InputBegan:Connect(function(input)
-    		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-    			if overLight(input.Position) then return end
-    			dragging = true
-    			dragStart = input.Position
-    			startPos = main.Position
-    		end
-    	end)
-    	
-    	titleBar.InputEnded:Connect(function(input)
-    		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-    			dragging = false
-    		end
-    	end)
-    	
-    	UIS.InputChanged:Connect(function(input)
-    		if not dragging then return end
-    		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-    			local d = input.Position - dragStart
-    			main.Position = UDim2.new(
-    				startPos.X.Scale, startPos.X.Offset + d.X,
-    				startPos.Y.Scale, startPos.Y.Offset + d.Y
-    			)
-    		end
-    	end)
-    	
-    	-- ---------- minimize ----------
+    	-- ---------- drag (clamped to viewport) ----------
+	local dragging = false
+	local dragStart, startAbsPos
+	local EDGE_GAP = 8
+
+	local function getViewportSize()
+		local camera = workspace.CurrentCamera
+		if camera then return camera.ViewportSize end
+		return Vector2.new(800, 600)
+	end
+
+	local function clampWindowPosition(x, y)
+		local viewport = getViewportSize()
+		local size = main.AbsoluteSize
+		local maxX = math.max(EDGE_GAP, viewport.X - size.X - EDGE_GAP)
+		local maxY = math.max(EDGE_GAP, viewport.Y - size.Y - EDGE_GAP)
+		local minX = math.min(EDGE_GAP, maxX)
+		local minY = math.min(EDGE_GAP, maxY)
+		return math.clamp(x, minX, maxX), math.clamp(y, minY, maxY)
+	end
+
+	local function setClampedPosition(x, y)
+		x, y = clampWindowPosition(x, y)
+		main.Position = UDim2.fromOffset(x, y)
+	end
+
+	local function overLight(pos)
+		for _, b in ipairs({closeBtn, minBtn}) do
+			local ap, as = b.AbsolutePosition, b.AbsoluteSize
+			if pos.X >= ap.X - 4 and pos.X <= ap.X + as.X + 4 and pos.Y >= ap.Y - 6 and pos.Y <= ap.Y + as.Y + 6 then
+				return true
+			end
+		end
+		return false
+	end
+
+	task.defer(function()
+		local vp = getViewportSize()
+		local sz = main.AbsoluteSize
+		setClampedPosition((vp.X - sz.X) / 2, (vp.Y - sz.Y) / 2)
+	end)
+
+	titleBar.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			if overLight(input.Position) then return end
+			dragging = true
+			dragStart = input.Position
+			startAbsPos = main.AbsolutePosition
+		end
+	end)
+
+	titleBar.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+
+	UIS.InputChanged:Connect(function(input)
+		if not dragging then return end
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+			local delta = input.Position - dragStart
+			setClampedPosition(startAbsPos.X + delta.X, startAbsPos.Y + delta.Y)
+		end
+	end)
+
+	local camera = workspace.CurrentCamera
+	if camera then
+		camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+			setClampedPosition(main.AbsolutePosition.X, main.AbsolutePosition.Y)
+		end)
+	end
+
+	-- ---------- minimize ----------
     	local minimized = false
     	local busy = false
     	
