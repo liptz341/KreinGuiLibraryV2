@@ -5300,13 +5300,33 @@ local function buildOriginalGui(parentGui, options)
     		return overlay, card, sub, keep, parts
     	end
     	
-    	closeBtn.MouseButton1Click:Connect(function()
-		-- Closing is immediate and never restores a minimized window first.
-		if closing then return end
+    	local function cancelClose(overlay)
+		if not closing then return end
+		closing = false
+		if overlay and overlay.Parent then overlay:Destroy() end
+	end
+
+	closeBtn.MouseButton1Click:Connect(function()
+		if closing or not (SG and SG.Parent) then return end
 		closing = true
-		if SG and SG.Parent then
-			SG:Destroy()
+		local overlay, card, countdown, keepBtn = buildCloseOverlay()
+		local cancelled = false
+		local function cancel()
+			if cancelled then return end
+			cancelled = true
+			cancelClose(overlay)
 		end
+		overlay.MouseButton1Click:Connect(cancel)
+		keepBtn.MouseButton1Click:Connect(cancel)
+		task.spawn(function()
+			for remaining = 3, 1, -1 do
+				if cancelled or not (SG and SG.Parent) then return end
+				countdown.Text = "Closing in " .. remaining .. " seconds"
+				task.wait(1)
+			end
+			if cancelled or not (SG and SG.Parent) then return end
+			SG:Destroy()
+		end)
 	end)
 
 	-- ===== collapsible submenus =====
@@ -5452,7 +5472,7 @@ function KreinGuiLibraryV2:CreateWindow(options)
         },
     }, KreinGuiLibraryV2Window)
 
-    -- Intro animation: keep the main window hidden until the intro finishes.
+    -- Intro animation: dark, beveled styling to match the library's 3D UI.
     main.Visible = false
     local TweenService = game:GetService("TweenService")
     local intro = Instance.new("Frame")
@@ -5465,14 +5485,53 @@ function KreinGuiLibraryV2:CreateWindow(options)
     intro.BorderSizePixel = 0
     intro.ZIndex = 500
     intro.Parent = screenGui
+
+    local shadow = Instance.new("Frame")
+    shadow.Name = "DepthShadow"
+    shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+    shadow.Position = UDim2.new(0.5, 0, 0.5, 5)
+    shadow.Size = UDim2.new(1, 6, 1, 6)
+    shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    shadow.BackgroundTransparency = 1
+    shadow.BorderSizePixel = 0
+    shadow.ZIndex = 499
+    shadow.Parent = intro
+
     local introCorner = Instance.new("UICorner")
-    introCorner.CornerRadius = UDim.new(0, 12)
+    introCorner.CornerRadius = UDim.new(0, 4)
     introCorner.Parent = intro
+    local introGradient = Instance.new("UIGradient")
+    introGradient.Rotation = 90
+    introGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(43, 43, 53)),
+        ColorSequenceKeypoint.new(0.48, Color3.fromRGB(27, 27, 34)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(18, 18, 23))
+    })
+    introGradient.Parent = intro
     local introStroke = Instance.new("UIStroke")
-    introStroke.Color = Color3.fromRGB(80, 190, 130)
-    introStroke.Thickness = 1.5
+    introStroke.Color = Color3.fromRGB(90, 95, 110)
+    introStroke.Thickness = 1.2
     introStroke.Transparency = 1
     introStroke.Parent = intro
+
+    local topEdge = Instance.new("Frame")
+    topEdge.Name = "TopBevel"
+    topEdge.Size = UDim2.new(1, -2, 0, 1)
+    topEdge.Position = UDim2.fromOffset(1, 1)
+    topEdge.BackgroundColor3 = Color3.fromRGB(220, 225, 240)
+    topEdge.BackgroundTransparency = 1
+    topEdge.BorderSizePixel = 0
+    topEdge.ZIndex = 501
+    topEdge.Parent = intro
+    local accent = Instance.new("Frame")
+    accent.Name = "AccentEdge"
+    accent.Size = UDim2.new(1, 0, 0, 2)
+    accent.Position = UDim2.new(0, 0, 1, -2)
+    accent.BackgroundColor3 = Color3.fromRGB(80, 190, 130)
+    accent.BackgroundTransparency = 1
+    accent.BorderSizePixel = 0
+    accent.ZIndex = 501
+    accent.Parent = intro
 
     local letters = {}
     for i = 1, 5 do
@@ -5484,9 +5543,9 @@ function KreinGuiLibraryV2:CreateWindow(options)
         letter.Font = Enum.Font.GothamBold
         letter.Text = string.sub("KREIN", i, i)
         letter.TextColor3 = Color3.fromRGB(245, 245, 250)
-        letter.TextSize = 29
+        letter.TextSize = 28
         letter.TextTransparency = 1
-        letter.ZIndex = 501
+        letter.ZIndex = 502
         letter.Parent = intro
         table.insert(letters, letter)
     end
@@ -5496,30 +5555,32 @@ function KreinGuiLibraryV2:CreateWindow(options)
     loader.BackgroundTransparency = 1
     loader.AnchorPoint = Vector2.new(0.5, 0.5)
     loader.Position = UDim2.new(0.5, 0, 0, 100)
-    loader.Size = UDim2.fromOffset(34, 34)
+    loader.Size = UDim2.fromOffset(30, 30)
     loader.Font = Enum.Font.Gotham
     loader.Text = "◌"
     loader.TextColor3 = Color3.fromRGB(80, 190, 130)
-    loader.TextSize = 31
+    loader.TextSize = 29
     loader.TextTransparency = 1
-    loader.ZIndex = 501
+    loader.ZIndex = 502
     loader.Parent = intro
 
-    local introFade = TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    TweenService:Create(intro, introFade, {BackgroundTransparency = 0.08}):Play()
-    TweenService:Create(introStroke, introFade, {Transparency = 0.15}):Play()
+    local introFade = TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    TweenService:Create(shadow, introFade, {BackgroundTransparency = 0.58}):Play()
+    TweenService:Create(intro, introFade, {BackgroundTransparency = 0.04}):Play()
+    TweenService:Create(introStroke, introFade, {Transparency = 0.22}):Play()
+    TweenService:Create(topEdge, introFade, {BackgroundTransparency = 0.82}):Play()
+    TweenService:Create(accent, introFade, {BackgroundTransparency = 0.05}):Play()
     task.spawn(function()
         for _, letter in ipairs(letters) do
-            TweenService:Create(letter, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
-            task.wait(0.12)
+            TweenService:Create(letter, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+            task.wait(0.14)
         end
         TweenService:Create(loader, introFade, {TextTransparency = 0}):Play()
-        local spin = TweenService:Create(loader, TweenInfo.new(0.65, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Rotation = 360})
+        local spin = TweenService:Create(loader, TweenInfo.new(0.72, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Rotation = 360})
         spin:Play()
         task.wait(1.15)
         spin:Cancel()
 
-        -- Capture and fade every supported GUI transparency together.
         local fadeItems = {}
         local function captureFade(obj, property)
             local ok, value = pcall(function() return obj[property] end)
@@ -5543,19 +5604,24 @@ function KreinGuiLibraryV2:CreateWindow(options)
             end
         end
         main.Visible = true
-        local fadeInInfo = TweenInfo.new(0.34, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local fadeInfo = TweenInfo.new(0.36, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
         for _, item in ipairs(fadeItems) do
-            pcall(function()
-                TweenService:Create(item.object, fadeInInfo, {[item.property] = item.base}):Play()
-            end)
+            pcall(function() TweenService:Create(item.object, fadeInfo, {[item.property] = item.base}):Play() end)
         end
-        TweenService:Create(intro, fadeInInfo, {BackgroundTransparency = 1}):Play()
-        TweenService:Create(introStroke, fadeInInfo, {Transparency = 1}):Play()
-        for _, letter in ipairs(letters) do
-            TweenService:Create(letter, fadeInInfo, {TextTransparency = 1}):Play()
+        for _, obj in ipairs({intro, introStroke, topEdge, accent, shadow}) do
+            if obj == intro then
+                TweenService:Create(obj, fadeInfo, {BackgroundTransparency = 1}):Play()
+            elseif obj == introStroke then
+                TweenService:Create(obj, fadeInfo, {Transparency = 1}):Play()
+            elseif obj == shadow then
+                TweenService:Create(obj, fadeInfo, {BackgroundTransparency = 1}):Play()
+            else
+                TweenService:Create(obj, fadeInfo, {BackgroundTransparency = 1}):Play()
+            end
         end
-        TweenService:Create(loader, fadeInInfo, {TextTransparency = 1}):Play()
-        task.wait(0.38)
+        for _, letter in ipairs(letters) do TweenService:Create(letter, fadeInfo, {TextTransparency = 1}):Play() end
+        TweenService:Create(loader, fadeInfo, {TextTransparency = 1}):Play()
+        task.wait(0.4)
         if screenGui and screenGui.Parent then intro:Destroy() end
     end)
 
