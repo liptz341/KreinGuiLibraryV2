@@ -1,10 +1,10 @@
 --[[
-    KreinGuiLibraryV2 - Original Visual Edition
-    Version: 2.1.0
+    KreinGuiLibraryV2 - Dynamic Content Edition
+    Version: 2.2.0
 
-    This build uses the user's original 479-instance converter hierarchy as-is.
-    It does not redraw or approximate the GUI. New controls are cloned from the
-    original components so their visual properties remain consistent.
+    The original converted GUI is kept as the visual foundation and as hidden
+    component templates. The active window starts empty: user-created tabs,
+    sections, and controls appear only when the corresponding API is called.
 
     Client-side library. In a normal Roblox experience, put this file in a
     ModuleScript and require it from a LocalScript. loadstring/HttpGet are only
@@ -13,7 +13,7 @@
 
 local KreinGuiLibraryV2 = {
     Name = "KreinGuiLibraryV2",
-    Version = "2.1.0",
+    Version = "2.2.0",
 }
 
 local Players = game:GetService("Players")
@@ -4610,6 +4610,7 @@ local function buildOriginalGui(parentGui, options)
     end
 
     local Controllers = {}
+    local requestedDefaultTab = type(options.DefaultTab) == "string" and options.DefaultTab or nil
     local function C_1df()
     local script = G2L["1df"];
     	local SG = script.Parent.Parent
@@ -4732,9 +4733,9 @@ local function buildOriginalGui(parentGui, options)
     		task.delay(dur + 0.06, function() conn:Disconnect(); nv:Destroy() end)
     	end
     	
-    	local sidebarFade = collectFades(sidebarHolder)
-    	
-    	local contentFade = collectFades(contentArea)
+    	local sidebarFade = {}
+    	local contentFade = {}
+    	local currentTab = nil
     	
     	local MINI_COMPACT_SIZE = UDim2.new(0, 190, 0, 40)
     	local titleLbl = titleBar:FindFirstChild("Title")
@@ -4780,15 +4781,17 @@ local function buildOriginalGui(parentGui, options)
     	end
     	
     	local function setMinimized(state)
-    		print("DBG setMin", state, busy, minimized)
     		if busy or minimized == state then return end
     		busy = true
     		minimized = state
     		if state then
-    			if indHolder then
-    				indicator.Visible = true
-    				TS:Create(indicator, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
-    			end
+    			-- Snapshot the actual user-created tabs and controls before fading.
+    			sidebarFade = collectFades(sidebarHolder)
+    			contentFade = collectFades(contentArea)
+    			if indHolder and currentTab then
+                indicator.Visible = true
+                TS:Create(indicator, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
+            end
     			fadeTo(sidebarFade, 1, 0.12)
     			fadeTo(contentFade, 1, 0.12)
     			task.wait(0.14)
@@ -4807,11 +4810,13 @@ local function buildOriginalGui(parentGui, options)
     			setTitleCompact(false)
     			sidebarHolder.Visible = true
     			contentArea.Visible = true
-    			if indHolder then
-    				indicator.Visible = true
-    				indicator.BackgroundTransparency = 1
-    				TS:Create(indicator, TweenInfo.new(0.34, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
-    			end
+    			if indHolder and currentTab then
+                indicator.Visible = true
+                indicator.BackgroundTransparency = 1
+                TS:Create(indicator, TweenInfo.new(0.34, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
+            else
+                indicator.Visible = false
+            end
     			setFade(sidebarFade, 1)
     			setFade(contentFade, 1)
     			TS:Create(main, TweenInfo.new(0.34, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = OPEN_SIZE}):Play()
@@ -4828,7 +4833,7 @@ local function buildOriginalGui(parentGui, options)
     	end)
     	
     	-- ---------- tabs ----------
-    	local TAB_NAMES = {"Inspector", "Components", "Layout", "Inputs", "Settings", "Advanced"}
+    	local TAB_NAMES = {}
     	local ACTIVE_BG = Color3.fromRGB(45, 45, 55)
     	local IDLE_BG = Color3.fromRGB(28, 28, 34)
     	local ACTIVE_TXT = Color3.fromRGB(255, 255, 255)
@@ -4861,7 +4866,8 @@ local function buildOriginalGui(parentGui, options)
     	indicator.Parent = indHolder
     	
     	
-    	local currentTab = nil
+    	
+		indicator.Visible = false
     	local tabToken = 0
     	
     	local function getTabPosY(tabName)
@@ -4881,7 +4887,9 @@ local function buildOriginalGui(parentGui, options)
     		if not newPage then return end
     		if currentTab == name and not instant then return end
     	
-    		local prevName = currentTab
+    		
+			indicator.Visible = true
+			local prevName = currentTab
     		local prevPage = prevName and contentArea:FindFirstChild(prevName)
     		currentTab = name
     		tabToken += 1
@@ -5102,8 +5110,7 @@ local function buildOriginalGui(parentGui, options)
     			end
     		end
     	end
-    	
-    	scan(SG)
+    	-- Only API-created clones are hooked when the caller adds them.
     	-- ---------- close: same visual language as Main, sharp corners ----------
     	local closing = false
     	
@@ -5355,9 +5362,7 @@ local function buildOriginalGui(parentGui, options)
     	for _, d in ipairs(main:GetDescendants()) do
     		if d:IsA("Frame") and d.Name == "Submenu" then hookSubmenu(d) end
     	end
-    	
-    	selectTab("Inspector")
-
+    	-- No tab is selected until the caller creates one through Window:CreateTab().
     	-- Public controller hooks used by the library API. Existing converted widgets
     	-- above keep their original behavior and styling.
     	Controllers.SelectTab = selectTab
@@ -5368,13 +5373,17 @@ local function buildOriginalGui(parentGui, options)
     	Controllers.HookInput = hookInput
     	Controllers.HookTextDisplay = hookTextDisplay
     	Controllers.RegisterTab = function(name, button, page)
-    		table.insert(TAB_NAMES, name)
-    		pageFades[name] = collectFades(page)
-    		button.MouseButton1Click:Connect(function()
-    			selectTab(name)
-    		end)
-    	end
-    	return Controllers
+        table.insert(TAB_NAMES, name)
+        pageFades[name] = collectFades(page)
+        button.MouseButton1Click:Connect(function()
+            selectTab(name)
+        end)
+        -- Select the first tab the user explicitly creates, unless a DefaultTab was requested.
+        if currentTab == nil and (requestedDefaultTab == nil or requestedDefaultTab == name) then
+            selectTab(name, true)
+        end
+    end
+    return Controllers
     end;
 
     local controllers = C_1df()
@@ -5394,15 +5403,40 @@ function KreinGuiLibraryV2:CreateWindow(options)
     local sidebar = G2L["16"]
     local contentArea = G2L["3d"]
 
+    -- Store the converter showcase pages and tabs as hidden templates.
+    -- They are cloned only when the user explicitly calls the public API.
+    local templateStorage = Instance.new("Frame")
+    templateStorage.Name = "_KreinGuiLibraryTemplates"
+    templateStorage.Size = UDim2.new(0, 0, 0, 0)
+    templateStorage.Position = UDim2.new(0, 0, 0, 0)
+    templateStorage.BackgroundTransparency = 1
+    templateStorage.BorderSizePixel = 0
+    templateStorage.Visible = false
+    templateStorage.Parent = screenGui
+
+    for _, child in ipairs(contentArea:GetChildren()) do
+        if child:IsA("GuiObject") then
+            child.Parent = templateStorage
+        end
+    end
+
+    for _, child in ipairs(sidebar:GetChildren()) do
+        if child:IsA("TextButton") and child.Name:match("Tab$") then
+            child.Parent = templateStorage
+        end
+    end
+
     local window = setmetatable({
         Gui = screenGui,
         Main = main,
+        SidebarHolder = sidebarHolder,
         Sidebar = sidebar,
         ContentArea = contentArea,
         Controllers = controllers,
         Tabs = {},
-        _tabNames = {"Inspector", "Components", "Layout", "Inputs", "Settings", "Advanced"},
+        _tabNames = {},
         _destroyed = false,
+        _templateStorage = templateStorage,
         Templates = {
             Page = G2L["3e"],
             SidebarTab = G2L["1e"],
@@ -5417,21 +5451,7 @@ function KreinGuiLibraryV2:CreateWindow(options)
         },
     }, KreinGuiLibraryV2Window)
 
-    for _, tabName in ipairs(window._tabNames) do
-        local page = contentArea:FindFirstChild(tabName)
-        if page then
-            window.Tabs[tabName] = setmetatable({
-                Window = window,
-                Name = tabName,
-                Page = page,
-            }, KreinGuiLibraryV2Tab)
-        end
-    end
-
-    if type(options.DefaultTab) == "string" and window.Tabs[options.DefaultTab] then
-        controllers.SelectTab(options.DefaultTab, true)
-    end
-
+    -- No demo tabs, sections, or controls are placed in the active window here.
     return window
 end
 
