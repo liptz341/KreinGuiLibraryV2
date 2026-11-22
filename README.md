@@ -1,175 +1,165 @@
 # KreinGuiLibraryV2
 
-**Version:** 2.0.0  
-**File:** `KreinGuiV2_Library.lua`
+**Dynamic Roblox UI library** built on the original Krein GUI visual template. The library provides a window, selectable tabs, sections, expandable submenus, and reusable controls.
 
-KreinGuiLibraryV2 is a reusable Roblox UI library built around the dark KreinGuiV2 visual style. It creates its own ScreenGui, draggable title bar, minimize/close controls, sidebar tabs, scrolling content pages, and interactive controls.
+> **Client-side only.** Use the library from a `LocalScript` in a Roblox experience. The library requires `Players.LocalPlayer` and creates its `ScreenGui` under `PlayerGui` by default.
 
-## 1. Load the library
+## Features
 
-For a client environment that supports `loadstring` and `game:HttpGet`:
+- Window dragging constrained to the visible viewport, with an 8 px edge margin when the window fits.
+- Re-centers and clamps the window when the viewport changes.
+- Tabs with fade transitions; original transparency values are retained across tab changes.
+- Sections and expandable/collapsible submenus.
+- Button, toggle, slider, textbox, and paragraph controls.
+- Callback hooks and basic control methods (`SetValue`, `SetText`, `SetVisible`, `Destroy`).
+
+## Installation
+
+1. Place `KreinGuiV2_Library.lua` in a `ModuleScript` named `KreinGuiLibraryV2`.
+2. Put a `LocalScript` alongside it, or in another client-side location that can access the ModuleScript.
+3. Require the module and create a window as shown below.
 
 ```lua
-local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/liptz341/KreinGuiLibraryV2/refs/heads/main/KreinGuiV2_Library.lua"
-))()
+local Library = require(script.Parent:WaitForChild("KreinGuiLibraryV2"))
 ```
 
-For a normal Roblox experience, place the source in a **ModuleScript** and load it with `require()`. `loadstring` and `game:HttpGet` are not available in every Roblox script context.
+If you use a hosted raw file in an environment that explicitly supports `loadstring` and `HttpGet`, load it using that environment's supported method. These functions are not available in ordinary Roblox experience scripts.
 
-## 2. Create a window and tab
+## Quick start
 
 ```lua
+local Library = require(script.Parent:WaitForChild("KreinGuiLibraryV2"))
+
 local Window = Library:CreateWindow({
-    Title = "Krein Hub",
-    Size = UDim2.fromOffset(560, 420),
-    ToggleKey = "RightShift", -- optional
+    Title = "Krein Demo",
+    GuiName = "KreinDemoGui", -- optional
+    -- Parent = playerGui,   -- optional; defaults to LocalPlayer.PlayerGui
 })
 
-local Main = Window:CreateTab("Main")
-local Section = Main:CreateSection("General")
-```
+local MainTab = Window:CreateTab("Main")
+local MainSection = MainTab:CreateSection("CONTROLS")
 
-`CreateWindow` options:
-
-| Option | Type | Description |
-|---|---|---|
-| `Title` | string | Window title |
-| `Size` | UDim2 | Window size; offset dimensions are used |
-| `Position` | UDim2 | Initial position; defaults to screen center |
-| `Parent` | Instance | GUI parent; defaults to LocalPlayer.PlayerGui |
-| `ToggleKey` | string / Enum.KeyCode | Optional key to show or hide the window |
-| `Theme` | table | Override supported theme colors |
-| `ShowAvatar` | boolean | Show the local player's avatar; defaults to true |
-| `DisplayOrder` | number | ScreenGui display order |
-
-Supported theme keys: `Background`, `Header`, `Sidebar`, `Panel`, `Control`, `ControlHover`, `Accent`, `AccentHover`, `Text`, `Muted`, `Border`, `Danger`, `Warning`, and `Success`.
-
-## 3. Components
-
-All component methods can be called on a `Tab` or on a `Section` returned by `CreateSection`.
-
-### Button
-
-```lua
-Section:CreateButton({
-    Name = "Run action",
+MainSection:CreateButton({
+    Name = "Click me",
     Callback = function()
         print("Button clicked")
     end,
 })
-```
 
-### Toggle
-
-```lua
-local Toggle = Section:CreateToggle({
+MainSection:CreateToggle({
     Name = "Enable feature",
     CurrentValue = false,
-    Callback = function(value)
-        print("Enabled:", value)
+    Callback = function(enabled)
+        print("Enabled:", enabled)
     end,
 })
 
-Toggle:SetValue(true)
-print(Toggle:GetValue())
-```
-
-### Slider
-
-```lua
-local Slider = Section:CreateSlider({
-    Name = "WalkSpeed",
+MainSection:CreateSlider({
+    Name = "Amount",
     Range = {0, 100},
-    Increment = 1,
-    CurrentValue = 16,
+    CurrentValue = 25,
     Callback = function(value)
-        print("Value:", value)
+        print("Amount:", value)
+    end,
+})
+
+MainSection:CreateTextbox({
+    Name = "Player label",
+    PlaceholderText = "Enter text...",
+    Callback = function(text, enterPressed)
+        if enterPressed then
+            print("Submitted:", text)
+        end
+    end,
+})
+
+MainSection:CreateParagraph({
+    Title = "About",
+    Content = "A short description displayed in the section.",
+})
+```
+
+## Tabs and sections
+
+```lua
+local SettingsTab = Window:CreateTab("Settings")
+local AudioSection = SettingsTab:CreateSection("AUDIO")
+AudioSection:CreateToggle({
+    Name = "Music",
+    CurrentValue = true,
+    Callback = function(enabled)
+        print("Music:", enabled)
+    end,
+})
+
+Window:SelectTab("Settings")
+```
+
+Tab names should be unique. Creating a tab with an existing name returns the existing tab.
+
+## Submenus
+
+A submenu can be created from a tab or a section. Controls created through the submenu object are parented inside its expandable content area.
+
+```lua
+local VisualsTab = Window:CreateTab("Visuals")
+local VisualsSection = VisualsTab:CreateSection("DISPLAY")
+local Submenu = VisualsSection:CreateSubmenu("Advanced options")
+
+Submenu:CreateToggle({
+    Name = "Show indicators",
+    CurrentValue = true,
+    Callback = function(enabled)
+        print("Indicators:", enabled)
+    end,
+})
+
+Submenu:CreateButton({
+    Name = "Reset display",
+    Callback = function()
+        print("Display reset")
     end,
 })
 ```
 
-### Textbox
+The submenu starts collapsed. Click its header to expand or collapse it.
 
-```lua
-Section:CreateTextbox({
-    Name = "Player name",
-    PlaceholderText = "Enter a name...",
-    Callback = function(text)
-        print(text)
-    end,
-})
-```
+## API reference
 
-Aliases: `CreateTextBox` and `CreateInput`.
+### Window
 
-### Dropdown
+| Method | Description |
+|---|---|
+| `Library:CreateWindow(options)` | Creates a window. Options: `Title`, `GuiName`, optional `Parent`, optional `DefaultTab`. |
+| `Window:CreateTab(name)` | Creates or returns a tab by name. |
+| `Window:GetTab(name)` | Gets a tab by name. |
+| `Window:SelectTab(name)` | Selects a tab. |
+| `Window:SetTitle(title)` | Sets the window title attribute. |
+| `Window:SetMinimized(state)` | Minimizes/restores the window. |
+| `Window:SetVisible(state)` | Shows or hides the window. |
+| `Window:GetGui()` | Returns the `ScreenGui`. |
+| `Window:Destroy()` | Destroys the window. |
 
-```lua
-Section:CreateDropdown({
-    Name = "Difficulty",
-    Options = {"Easy", "Normal", "Hard"},
-    CurrentOption = "Normal",
-    Callback = function(option)
-        print(option)
-    end,
-})
-```
+### Tab and section
 
-For multi-select, set `MultipleOptions = true` and pass a table as `CurrentOption`. The callback receives a table of selected options.
+`Tab:CreateSection(title)` creates a section. Tabs also expose `CreateSubmenu`, `CreateButton`, `CreateToggle`, `CreateSlider`, `CreateTextbox`, and `CreateParagraph` as direct-content helpers.
 
-### Keybind
+Sections expose `CreateSubmenu`, `CreateButton`, `CreateToggle`, `CreateSlider`, `CreateTextbox`, and `CreateParagraph`.
 
-```lua
-Section:CreateKeybind({
-    Name = "Action key",
-    CurrentKeybind = "E",
-    Callback = function(keyCode)
-        print(keyCode.Name)
-    end,
-})
-```
+### Controls
 
-Click the key field, then press the desired key. Press Escape to cancel key selection.
+| Control | Main options | Callback |
+|---|---|---|
+| Button | `Name`, optional `Style = "ghost"` or `Kind = "ghost"` | `Callback()` |
+| Toggle | `Name`, `CurrentValue` | `Callback(enabled)` |
+| Slider | `Name`, `Range = {min, max}`, `CurrentValue` | `Callback(value)` |
+| Textbox | `Name`, `PlaceholderText`, `CurrentValue`, `ClearTextOnFocus` | `Callback(text, enterPressed)` on focus lost |
+| Paragraph | `Title`, `Content` | — |
 
-### Label and paragraph
+Controls return a handle. Available common methods are `SetVisible(state)` and `Destroy()`. Buttons/toggles/sliders/textboxes/paragraphs also provide relevant value or text setters where implemented (`SetValue` or `SetText`).
 
-```lua
-Section:CreateLabel("A short description")
+## Notes
 
-Section:CreateParagraph({
-    Title = "Information",
-    Content = "Longer explanatory text goes here.",
-})
-```
-
-Alias: `CreateDescription` for `CreateLabel`.
-
-### Color picker
-
-```lua
-Section:CreateColorPicker({
-    Name = "Accent color",
-    Callback = function(color)
-        print(color)
-    end,
-})
-```
-
-The color picker uses a preset swatch palette. Supply a custom `Colors` array to replace the default swatches.
-
-## 4. Window methods
-
-```lua
-Window:SelectTab("Main")
-Window:Minimize()       -- toggles minimized state
-Window:Minimize(false)  -- restore window
-Window:Toggle()         -- toggles ScreenGui.Enabled
-Window:Destroy()        -- disconnects library events and removes the GUI
-```
-
-Most controls return a handle with `Instance`, `Value`, `SetValue(value)`, `GetValue()`, `SetVisible(boolean)`, and `Destroy()`. Some controls expose additional fields such as `Button`, `Textbox`, `Bar`, `Toggle`, or `KeyButton`.
-
-## 5. Example
-
-See `KreinGuiV2_Example.lua` for a ready-to-edit sample using the raw GitHub URL above.
+- The window has a fixed base size of 480 × 360 pixels. If the viewport is smaller than the window, the library pins its position to the near edge; the window itself cannot be resized by this build.
+- Keep UI creation and interaction code client-side. Do not place client UI logic in a server `Script`.
+- Test layout and touch interaction in Roblox Studio's device emulator and on the target device before release.
