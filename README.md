@@ -1,78 +1,175 @@
-# KreinGuiV2 - Enterprise Figma Pro UI Library for Roblox
+# KreinGuiLibraryV2
 
-KreinGuiV2 is a modern, lightweight, Figma Pro styled dark-mode UI Library for Roblox exploit executors and custom script hubs. It features sharp corners, precise traffic light window controls, custom toggle/slider/button components, and a fully modular API.
+**Version:** 2.0.0  
+**File:** `KreinGuiV2_Library.lua`
 
-## Features
-- **Figma Pro Dark Mode Theme:** Clean dark aesthetics (`#1B1B1F` main, `#27272E` titlebar, custom bevels).
-- **Interactive Traffic Lights:** Fully functional Close button and Minimize/Restore animation.
-- **Draggable Window:** Smooth dragging support via `UserInputService`.
-- **Modular Components:** Tabs, Buttons, Toggles, Sliders, Descriptions, and Input fields.
-- **Loadstring Compatible:** Self-contained single-file library distribution.
+KreinGuiLibraryV2 is a reusable Roblox UI library built around the dark KreinGuiV2 visual style. It creates its own ScreenGui, draggable title bar, minimize/close controls, sidebar tabs, scrolling content pages, and interactive controls.
 
----
+## 1. Load the library
 
-## Installation & Usage
-
-Execute the following script using any standard Roblox executor (Solara, Delta, Synapse, Krnl, etc.):
+For a client environment that supports `loadstring` and `game:HttpGet`:
 
 ```lua
-local Krein = loadstring(game:HttpGet("https://raw.githubusercontent.com/liptz341/KreinGuiLibraryV2/refs/heads/main/KreinGuiV2_Library.lua"))()
-
-local Window = Krein:CreateWindow({
-    Title = "Figma 3D Workspace Pro"
-})
-
-local Tab = Window:CreateTab("Inputs")
-
-Tab:CreateButton("Run Process", function()
-    print("Action button clicked!")
-end)
-
-Tab:CreateToggle("Auto Farm", false, function(state)
-    print("Toggle state:", state)
-end)
-
-Tab:CreateSlider("WalkSpeed", 16, 250, 16, function(value)
-    game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = value
-end)
+local Library = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/liptz341/KreinGuiLibraryV2/refs/heads/main/KreinGuiV2_Library.lua"
+))()
 ```
 
----
+For a normal Roblox experience, place the source in a **ModuleScript** and load it with `require()`. `loadstring` and `game:HttpGet` are not available in every Roblox script context.
 
-## API Reference
+## 2. Create a window and tab
 
-### `Krein:CreateWindow(config)`
-Creates the main window interface.
-- `config.Title` (string): Title displayed on the titlebar.
+```lua
+local Window = Library:CreateWindow({
+    Title = "Krein Hub",
+    Size = UDim2.fromOffset(560, 420),
+    ToggleKey = "RightShift", -- optional
+})
 
-### `Window:CreateTab(name)`
-Creates a navigation tab inside the sidebar.
-- `name` (string): Label for the tab.
+local Main = Window:CreateTab("Main")
+local Section = Main:CreateSection("General")
+```
 
-### `Tab:CreateButton(text, callback)`
-Creates an interactive action button.
-- `text` (string): Button label.
-- `callback` (function): Function executed on click.
+`CreateWindow` options:
 
-### `Tab:CreateToggle(text, default, callback)`
-Creates an interactive toggle switch.
-- `text` (string): Toggle label.
-- `default` (boolean): Initial state (`true`/`false`).
-- `callback` (function): Function executed on state change.
+| Option | Type | Description |
+|---|---|---|
+| `Title` | string | Window title |
+| `Size` | UDim2 | Window size; offset dimensions are used |
+| `Position` | UDim2 | Initial position; defaults to screen center |
+| `Parent` | Instance | GUI parent; defaults to LocalPlayer.PlayerGui |
+| `ToggleKey` | string / Enum.KeyCode | Optional key to show or hide the window |
+| `Theme` | table | Override supported theme colors |
+| `ShowAvatar` | boolean | Show the local player's avatar; defaults to true |
+| `DisplayOrder` | number | ScreenGui display order |
 
-### `Tab:CreateSlider(text, min, max, default, callback)`
-Creates a numerical slider component.
-- `text` (string): Slider label.
-- `min` (number): Minimum value.
-- `max` (number): Maximum value.
-- `default` (number): Default value.
-- `callback` (function): Function executed on value change.
+Supported theme keys: `Background`, `Header`, `Sidebar`, `Panel`, `Control`, `ControlHover`, `Accent`, `AccentHover`, `Text`, `Muted`, `Border`, `Danger`, `Warning`, and `Success`.
 
-### `Tab:CreateDescription(text)`
-Creates a read-only static text display card for notes or information.
-- `text` (string): Description content.
+## 3. Components
 
----
+All component methods can be called on a `Tab` or on a `Section` returned by `CreateSection`.
 
-## License
-MIT License - Created for Roblox scripting and UI design.
+### Button
+
+```lua
+Section:CreateButton({
+    Name = "Run action",
+    Callback = function()
+        print("Button clicked")
+    end,
+})
+```
+
+### Toggle
+
+```lua
+local Toggle = Section:CreateToggle({
+    Name = "Enable feature",
+    CurrentValue = false,
+    Callback = function(value)
+        print("Enabled:", value)
+    end,
+})
+
+Toggle:SetValue(true)
+print(Toggle:GetValue())
+```
+
+### Slider
+
+```lua
+local Slider = Section:CreateSlider({
+    Name = "WalkSpeed",
+    Range = {0, 100},
+    Increment = 1,
+    CurrentValue = 16,
+    Callback = function(value)
+        print("Value:", value)
+    end,
+})
+```
+
+### Textbox
+
+```lua
+Section:CreateTextbox({
+    Name = "Player name",
+    PlaceholderText = "Enter a name...",
+    Callback = function(text)
+        print(text)
+    end,
+})
+```
+
+Aliases: `CreateTextBox` and `CreateInput`.
+
+### Dropdown
+
+```lua
+Section:CreateDropdown({
+    Name = "Difficulty",
+    Options = {"Easy", "Normal", "Hard"},
+    CurrentOption = "Normal",
+    Callback = function(option)
+        print(option)
+    end,
+})
+```
+
+For multi-select, set `MultipleOptions = true` and pass a table as `CurrentOption`. The callback receives a table of selected options.
+
+### Keybind
+
+```lua
+Section:CreateKeybind({
+    Name = "Action key",
+    CurrentKeybind = "E",
+    Callback = function(keyCode)
+        print(keyCode.Name)
+    end,
+})
+```
+
+Click the key field, then press the desired key. Press Escape to cancel key selection.
+
+### Label and paragraph
+
+```lua
+Section:CreateLabel("A short description")
+
+Section:CreateParagraph({
+    Title = "Information",
+    Content = "Longer explanatory text goes here.",
+})
+```
+
+Alias: `CreateDescription` for `CreateLabel`.
+
+### Color picker
+
+```lua
+Section:CreateColorPicker({
+    Name = "Accent color",
+    Callback = function(color)
+        print(color)
+    end,
+})
+```
+
+The color picker uses a preset swatch palette. Supply a custom `Colors` array to replace the default swatches.
+
+## 4. Window methods
+
+```lua
+Window:SelectTab("Main")
+Window:Minimize()       -- toggles minimized state
+Window:Minimize(false)  -- restore window
+Window:Toggle()         -- toggles ScreenGui.Enabled
+Window:Destroy()        -- disconnects library events and removes the GUI
+```
+
+Most controls return a handle with `Instance`, `Value`, `SetValue(value)`, `GetValue()`, `SetVisible(boolean)`, and `Destroy()`. Some controls expose additional fields such as `Button`, `Textbox`, `Bar`, `Toggle`, or `KeyButton`.
+
+## 5. Example
+
+See `KreinGuiV2_Example.lua` for a ready-to-edit sample using the raw GitHub URL above.
