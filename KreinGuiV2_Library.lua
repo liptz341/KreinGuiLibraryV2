@@ -5343,12 +5343,15 @@ local function buildOriginalGui(parentGui, options)
     		local ch = contentH()
     		inner.Size = UDim2.new(1, -24, 0, ch)
     		inner.Visible = false
-    		local expandedH = inner.Position.Y.Offset + ch + 10
     		head.MouseButton1Click:Connect(function()
     			if busy then return end
     			busy = true
     			open = not open
     			if open then
+    				-- Recalculate after API-created controls have been parented.
+    				ch = contentH()
+    				inner.Size = UDim2.new(1, -24, 0, ch)
+    				local expandedH = inner.Position.Y.Offset + ch + 10
     				inner.Visible = true
     				TS:Create(arrow, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = 0}):Play()
     				local t = TS:Create(sm, TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, expandedH)})
@@ -5378,7 +5381,7 @@ local function buildOriginalGui(parentGui, options)
     	Controllers.HookSlider = hookSlider
     	Controllers.HookInput = hookInput
     	Controllers.HookTextDisplay = hookTextDisplay
-	Controllers.HookSubmenu = hookSubmenu
+    	Controllers.HookSubmenu = hookSubmenu
     	Controllers.RegisterTab = function(name, button, page)
         table.insert(TAB_NAMES, name)
         pageFades[name] = collectFades(page)
@@ -5455,7 +5458,7 @@ function KreinGuiLibraryV2:CreateWindow(options)
             Slider = G2L["8b"],
             Textbox = G2L["76"],
             Paragraph = G2L["160"],
-            Submenu = G2L["ee"],
+            Submenu = G2L["51"],
         },
     }, KreinGuiLibraryV2Window)
 
@@ -5552,14 +5555,12 @@ function KreinGuiLibraryV2Tab:CreateSection(title)
     return setmetatable({ Tab = self, Window = self.Window, Parent = self.Page }, KreinGuiLibraryV2Section)
 end
 
--- Submenus are collapsible groups. They return a Section-like builder, so all
--- existing component methods can be used inside them.
-function KreinGuiLibraryV2Tab:CreateSubmenu(title)
-    return self:_DirectSection():CreateSubmenu(title)
-end
-
 function KreinGuiLibraryV2Tab:_DirectSection()
     return setmetatable({ Tab = self, Window = self.Window, Parent = self.Page }, KreinGuiLibraryV2Section)
+end
+
+function KreinGuiLibraryV2Tab:CreateSubmenu(title)
+    return self:_DirectSection():CreateSubmenu(title)
 end
 
 function KreinGuiLibraryV2Tab:CreateButton(options, callback)
@@ -5579,25 +5580,31 @@ function KreinGuiLibraryV2Tab:CreateParagraph(options)
 end
 
 function KreinGuiLibraryV2Section:CreateSubmenu(title)
-    assert(self.Parent and self.Parent.Parent, "Parent container is no longer available")
+    assert(self.Parent and self.Parent.Parent, "Submenu parent is no longer available")
     local submenu = self.Window.Templates.Submenu:Clone()
     submenu.Name = "Submenu"
     submenu.LayoutOrder = self.Window:_NextLayoutOrder(self.Parent)
+
     local titleLabel = submenu:FindFirstChild("TitleLbl")
-    if titleLabel then titleLabel.Text = tostring(title or "SUBMENU") end
+    if titleLabel then titleLabel.Text = tostring(title or "Submenu") end
+
     local inner = submenu:FindFirstChild("InnerList")
-    if inner then
-        for _, child in ipairs(inner:GetChildren()) do
-            if child:IsA("GuiObject") and not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
-                child:Destroy()
-            end
-        end
+    assert(inner, "Submenu template is missing InnerList")
+
+    -- Remove showcase controls but retain the UIListLayout.
+    for _, child in ipairs(inner:GetChildren()) do
+        if child:IsA("GuiObject") then child:Destroy() end
     end
+
     submenu.Parent = self.Parent
-    if self.Window.Controllers.HookSubmenu then
-        self.Window.Controllers.HookSubmenu(submenu)
-    end
-    return setmetatable({ Tab = self.Tab, Window = self.Window, Parent = inner or submenu, Submenu = submenu }, KreinGuiLibraryV2Section)
+    self.Window.Controllers.HookSubmenu(submenu)
+
+    return setmetatable({
+        Tab = self.Tab,
+        Window = self.Window,
+        Parent = inner,
+        Submenu = submenu,
+    }, KreinGuiLibraryV2Section)
 end
 
 function KreinGuiLibraryV2Section:CreateButton(options, callback)
