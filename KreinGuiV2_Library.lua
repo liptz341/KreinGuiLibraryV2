@@ -4661,6 +4661,10 @@ local function buildOriginalGui(parentGui, options)
 	local EDGE_GAP = 8
 
 	local function getViewportSize()
+		-- ScreenGui.AbsoluteSize matches the actual GUI coordinate space,
+		-- including devices where the camera viewport and GUI inset differ.
+		local size = SG.AbsoluteSize
+		if size.X > 0 and size.Y > 0 then return size end
 		local camera = workspace.CurrentCamera
 		if camera then return camera.ViewportSize end
 		return Vector2.new(800, 600)
