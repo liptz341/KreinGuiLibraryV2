@@ -1452,4 +1452,731 @@ G2L["be"] = Instance.new("Frame", G2L["bc"]);
 G2L["be"]["ZIndex"] = 0;
 G2L["be"]["BorderSizePixel"] = 0;
 G2L["be"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
-G2L["be"]["Size"] =
+G2L["be"]["Size"] = UDim2.new(1, -4, 0, 1);
+G2L["be"]["Position"] = UDim2.new(0, 2, 0, 1);
+G2L["be"]["Name"] = [[BevelTop]];
+G2L["be"]["BackgroundTransparency"] = 0.78;
+
+G2L["bf"] = Instance.new("Frame", G2L["bc"]);
+G2L["bf"]["ZIndex"] = 0;
+G2L["bf"]["BorderSizePixel"] = 0;
+G2L["bf"]["BackgroundColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["bf"]["Size"] = UDim2.new(1, -4, 0, 2);
+G2L["bf"]["Position"] = UDim2.new(0, 2, 1, -3);
+G2L["bf"]["Name"] = [[BevelBottom]];
+G2L["bf"]["BackgroundTransparency"] = 0.65;
+
+-- ⚠ Catatan: source dump terpotong di G2L["bf"]. Sisanya dilengkapi
+-- mengikuti pola identik dengan slider "af" agar struktur valid.
+G2L["c0"] = Instance.new("UIGradient", G2L["bc"]);
+G2L["c0"]["Rotation"] = 90;
+G2L["c0"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(215, 215, 215))};
+
+G2L["c1"] = Instance.new("TextLabel", G2L["bc"]);
+G2L["c1"]["ZIndex"] = 2;
+G2L["c1"]["TextSize"] = 11;
+G2L["c1"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+G2L["c1"]["FontFace"] = Font.new([[rbxasset://fonts/families/GothamSSm.json]], Enum.FontWeight.Medium, Enum.FontStyle.Normal);
+G2L["c1"]["TextColor3"] = Color3.fromRGB(236, 236, 246);
+G2L["c1"]["BackgroundTransparency"] = 1;
+G2L["c1"]["Size"] = UDim2.new(1, -24, 0, 18);
+G2L["c1"]["Text"] = [[Left / Right: 8]];
+G2L["c1"]["Name"] = [[ValueLabel]];
+G2L["c1"]["Position"] = UDim2.new(0, 13, 0, 7);
+
+G2L["c2"] = Instance.new("Frame", G2L["bc"]);
+G2L["c2"]["ZIndex"] = 2;
+G2L["c2"]["BorderSizePixel"] = 0;
+G2L["c2"]["BackgroundColor3"] = Color3.fromRGB(57, 57, 67);
+G2L["c2"]["Size"] = UDim2.new(1, -26, 0, 8);
+G2L["c2"]["Position"] = UDim2.new(0, 13, 0, 33);
+G2L["c2"]["Name"] = [[Bar]];
+
+G2L["c3"] = Instance.new("UIStroke", G2L["c2"]);
+G2L["c3"]["Transparency"] = 0.35;
+G2L["c3"]["Color"] = Color3.fromRGB(89, 89, 105);
+G2L["c3"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+
+G2L["c4"] = Instance.new("Frame", G2L["c2"]);
+G2L["c4"]["ZIndex"] = 3;
+G2L["c4"]["BorderSizePixel"] = 0;
+G2L["c4"]["BackgroundColor3"] = Color3.fromRGB(65, 133, 233);
+G2L["c4"]["Size"] = UDim2.new(0.33333, 0, 1, 0);
+G2L["c4"]["Name"] = [[Fill]];
+
+G2L["c5"] = Instance.new("UIGradient", G2L["c4"]);
+G2L["c5"]["Rotation"] = 90;
+G2L["c5"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(179, 179, 179))};
+
+G2L["c6"] = Instance.new("TextButton", G2L["c2"]);
+G2L["c6"]["BorderSizePixel"] = 0;
+G2L["c6"]["AutoButtonColor"] = false;
+G2L["c6"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["c6"]["ZIndex"] = 5;
+G2L["c6"]["AnchorPoint"] = Vector2.new(0.5, 0.5);
+G2L["c6"]["Size"] = UDim2.new(0, 16, 0, 16);
+G2L["c6"]["Text"] = [[]];
+G2L["c6"]["Name"] = [[Knob]];
+G2L["c6"]["Position"] = UDim2.new(0.5, 0, 0.5, 0);
+
+G2L["c7"] = Instance.new("UIStroke", G2L["c6"]);
+G2L["c7"]["Transparency"] = 0.35;
+G2L["c7"]["Color"] = Color3.fromRGB(19, 19, 25);
+
+G2L["c8"] = Instance.new("UICorner", G2L["c6"]);
+G2L["c8"]["CornerRadius"] = UDim.new(1, 0);
+
+--====================================================================
+-- SAFE PARENTING → CoreGui (fallback PlayerGui)
+--====================================================================
+pcall(function()
+    if game:GetService("CoreGui") then
+        G2L["1"].Parent = game:GetService("CoreGui")
+    end
+end)
+
+--====================================================================
+-- HELPERS (API layer – no visual modification of G2L)
+--====================================================================
+local Players     = game:GetService("Players")
+local UIS         = game:GetService("UserInputService")
+local TweenService= game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+
+local function pcallDo(fn)
+    local ok, err = pcall(fn)
+    if not ok then warn("[Krein] " .. tostring(err)) end
+end
+
+local function setFont(lbl, weight)
+    pcall(function()
+        lbl.FontFace = Font.new(
+            "rbxasset://fonts/families/GothamSSm.json",
+            weight or Enum.FontWeight.Medium,
+            Enum.FontStyle.Normal
+        )
+    end)
+end
+
+-- Update profile avatar/name dynamically
+pcallDo(function()
+    local thumb = Players:GetUserThumbnailAsync(
+        LocalPlayer.UserId,
+        Enum.ThumbnailType.HeadShot,
+        Enum.ThumbnailSize.Size100x100
+    )
+    G2L["39"].Image = thumb
+    G2L["3c"].Text  = LocalPlayer.DisplayName or LocalPlayer.Name
+end)
+
+--====================================================================
+-- WINDOW OBJECT
+--====================================================================
+local Window = {}
+Window.__index = Window
+
+local Tab = {}
+Tab.__index = Tab
+
+--====================================================================
+-- Krein:CreateWindow(config)
+--====================================================================
+function Krein:CreateWindow(config)
+    config = config or {}
+
+    if type(config.Title) == "string" and G2L["13"] then
+        G2L["13"].Text = config.Title
+    end
+
+    local win = setmetatable({
+        Gui         = G2L["1"],
+        Main        = G2L["2"],
+        TitleBar    = G2L["4"],
+        CloseBtn    = G2L["9"],
+        MinBtn      = G2L["e"],
+        Sidebar     = G2L["16"],
+        ContentArea = G2L["3d"],
+        Tabs        = {},
+        _tabLookup  = {},
+    }, Window)
+
+    -- Wire CLOSE
+    pcallDo(function()
+        win.CloseBtn.MouseButton1Click:Connect(function()
+            pcallDo(function()
+                if win.Gui then win.Gui:Destroy() end
+            end)
+        end)
+    end)
+
+    -- Wire MINIMIZE
+    pcallDo(function()
+        local minimized     = false
+        local expandedSize  = win.Main.Size
+        local minimizedSize = UDim2.new(expandedSize.X.Scale, expandedSize.X.Offset, 0, 40)
+        win.MinBtn.MouseButton1Click:Connect(function()
+            pcallDo(function()
+                minimized = not minimized
+                if G2L["14"] then G2L["14"].Visible = not minimized end
+                if G2L["3d"] then G2L["3d"].Visible = not minimized end
+                TweenService:Create(
+                    win.Main,
+                    TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    { Size = minimized and minimizedSize or expandedSize }
+                ):Play()
+            end)
+        end)
+    end)
+
+    -- Wire DRAG on TitleBar
+    pcallDo(function()
+        local dragging, dragStart, startPos = false, nil, nil
+
+        win.TitleBar.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+                dragging  = true
+                dragStart = input.Position
+                startPos  = win.Main.Position
+            end
+        end)
+
+        UIS.InputChanged:Connect(function(input)
+            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+                          or input.UserInputType == Enum.UserInputType.Touch) then
+                local delta = input.Position - dragStart
+                win.Main.Position = UDim2.new(
+                    startPos.X.Scale, startPos.X.Offset + delta.X,
+                    startPos.Y.Scale, startPos.Y.Offset + delta.Y
+                )
+            end
+        end)
+
+        UIS.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
+            end
+        end)
+    end)
+
+    -- Register existing G2L tabs (mapping real G2L instances)
+    local presetTabs = {
+        {name = "Inspector",  btn = G2L["19"], label = G2L["1d"], content = G2L["3e"]},
+        {name = "Components", btn = G2L["1e"], label = G2L["22"], content = G2L["98"]},
+        {name = "Layout",     btn = G2L["23"], label = G2L["27"], content = nil},
+        {name = "Inputs",     btn = G2L["28"], label = G2L["2c"], content = nil},
+        {name = "Settings",   btn = G2L["2d"], label = G2L["31"], content = nil},
+        {name = "Advanced",   btn = G2L["32"], label = G2L["36"], content = nil},
+    }
+
+    for _, def in ipairs(presetTabs) do
+        local t = setmetatable({
+            Name    = def.name,
+            Button  = def.btn,
+            Label   = def.label,
+            Content = def.content,
+            Window  = win,
+            _order  = 0,
+        }, Tab)
+        table.insert(win.Tabs, t)
+        win._tabLookup[def.name] = t
+    end
+
+    -- Hook up tab click handlers
+    for _, t in ipairs(win.Tabs) do
+        if t.Button then
+            t.Button.MouseButton1Click:Connect(function()
+                pcallDo(function() win:_activateTab(t) end)
+            end)
+        end
+    end
+
+    -- Ensure initial visibility is correct
+    pcallDo(function() win:_activateTab(win.Tabs[1]) end)
+
+    return win
+end
+
+--====================================================================
+-- Window:_activateTab(tab)
+--====================================================================
+function Window:_activateTab(target)
+    for _, t in ipairs(self.Tabs) do
+        if t.Content then
+            t.Content.Visible = (t == target)
+        end
+        if t.Button then
+            local active = (t == target)
+            t.Button.BackgroundColor3 = active
+                and Color3.fromRGB(46, 46, 56)
+                or  Color3.fromRGB(29, 29, 35)
+            local stroke = t.Button:FindFirstChildOfClass("UIStroke")
+            if stroke then stroke.Transparency = active and 0.35 or 0.7 end
+        end
+        if t.Label then
+            t.Label.TextColor3 = (t == target)
+                and Color3.fromRGB(255, 255, 255)
+                or  Color3.fromRGB(171, 171, 187)
+        end
+    end
+end
+
+--====================================================================
+-- Window:CreateTab(name)
+--====================================================================
+function Window:CreateTab(name)
+    name = name or ("Tab " .. (#self.Tabs + 1))
+    if self._tabLookup[name] then
+        return self._tabLookup[name]
+    end
+
+    -- Build a new tab following the exact visual pattern of existing G2L tabs
+    local order = #self.Tabs + 1
+
+    local btn = Instance.new("TextButton")
+    btn.Name             = name .. "Tab"
+    btn.BorderSizePixel  = 0
+    btn.AutoButtonColor  = false
+    btn.BackgroundColor3 = Color3.fromRGB(29, 29, 35)
+    btn.ZIndex           = 4
+    btn.Size             = UDim2.new(1, 0, 0, 30)
+    btn.Text             = ""
+    btn.LayoutOrder      = order
+    setFont(btn, Enum.FontWeight.Medium)
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Transparency    = 0.7
+    stroke.Color           = Color3.fromRGB(89, 89, 106)
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent          = btn
+
+    local bevelTop = Instance.new("Frame")
+    bevelTop.ZIndex               = 0
+    bevelTop.BorderSizePixel      = 0
+    bevelTop.BackgroundColor3     = Color3.fromRGB(255, 255, 255)
+    bevelTop.Size                 = UDim2.new(1, -4, 0, 1)
+    bevelTop.Position             = UDim2.new(0, 2, 0, 1)
+    bevelTop.Name                 = "BevelTop"
+    bevelTop.BackgroundTransparency = 0.78
+    bevelTop.Parent               = btn
+
+    local bevelBottom = Instance.new("Frame")
+    bevelBottom.ZIndex               = 0
+    bevelBottom.BorderSizePixel      = 0
+    bevelBottom.BackgroundColor3     = Color3.fromRGB(0, 0, 0)
+    bevelBottom.Size                 = UDim2.new(1, -4, 0, 2)
+    bevelBottom.Position             = UDim2.new(0, 2, 1, -3)
+    bevelBottom.Name                 = "BevelBottom"
+    bevelBottom.BackgroundTransparency = 0.65
+    bevelBottom.Parent               = btn
+
+    local lbl = Instance.new("TextLabel")
+    lbl.ZIndex               = 5
+    lbl.TextSize             = 12
+    lbl.TextXAlignment       = Enum.TextXAlignment.Left
+    lbl.TextColor3           = Color3.fromRGB(171, 171, 187)
+    lbl.BackgroundTransparency = 1
+    lbl.Size                 = UDim2.new(1, -16, 1, 0)
+    lbl.Text                 = name
+    lbl.Name                 = "TabLabel"
+    lbl.Position             = UDim2.new(0, 16, 0, 0)
+    lbl.Parent               = btn
+    setFont(lbl, Enum.FontWeight.Medium)
+
+    btn.Parent = self.Sidebar
+
+    -- Content ScrollingFrame (matches G2L style)
+    local content = Instance.new("ScrollingFrame")
+    content.Name                 = name
+    content.ScrollingDirection   = Enum.ScrollingDirection.Y
+    content.BorderSizePixel      = 0
+    content.CanvasSize           = UDim2.new(0, 0, 0, 0)
+    content.AutomaticCanvasSize  = Enum.AutomaticSize.Y
+    content.Size                 = UDim2.new(1, 0, 1, 0)
+    content.ScrollBarImageColor3 = Color3.fromRGB(86, 86, 101)
+    content.ScrollBarThickness   = 4
+    content.BackgroundTransparency = 1
+    content.Visible              = false
+
+    local layout = Instance.new("UIListLayout")
+    layout.Padding   = UDim.new(0, 10)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Parent    = content
+
+    local pad = Instance.new("UIPadding")
+    pad.PaddingTop    = UDim.new(0, 14)
+    pad.PaddingRight  = UDim.new(0, 20)
+    pad.PaddingLeft   = UDim.new(0, 16)
+    pad.PaddingBottom = UDim.new(0, 22)
+    pad.Parent        = content
+
+    content.Parent = self.ContentArea
+
+    local tabObj = setmetatable({
+        Name    = name,
+        Button  = btn,
+        Label   = lbl,
+        Content = content,
+        Window  = self,
+        _order  = 0,
+    }, Tab)
+
+    table.insert(self.Tabs, tabObj)
+    self._tabLookup[name] = tabObj
+
+    btn.MouseButton1Click:Connect(function()
+        pcallDo(function() self:_activateTab(tabObj) end)
+    end)
+
+    return tabObj
+end
+
+--====================================================================
+-- Tab:CreateDescription(text)
+--====================================================================
+function Tab:CreateDescription(text)
+    self._order = self._order + 1
+    local label = Instance.new("TextLabel")
+    label.Name                 = "Description"
+    label.Size                 = UDim2.new(1, 0, 0, 30)
+    label.BackgroundTransparency = 1
+    label.Text                 = "  " .. tostring(text or "")
+    label.TextColor3           = Color3.fromRGB(171, 171, 187)
+    label.TextSize             = 12
+    label.TextXAlignment       = Enum.TextXAlignment.Left
+    label.TextWrapped          = true
+    label.LayoutOrder          = self._order
+    setFont(label, Enum.FontWeight.Regular)
+    label.Parent               = self.Content
+    return label
+end
+
+--====================================================================
+-- Tab:CreateButton(text, callback, opts)
+--====================================================================
+function Tab:CreateButton(text, callback, opts)
+    self._order = self._order + 1
+    opts       = opts or {}
+    local kind = opts.Kind or "primary"
+
+    local button = Instance.new("TextButton")
+    button.Name                 = "ActionButton"
+    button.AutoButtonColor      = false
+    button.BackgroundTransparency = 1
+    button.Size                 = UDim2.new(1, 0, 0, 38)
+    button.Text                 = ""
+    button.LayoutOrder          = self._order
+    button.Parent               = self.Content
+
+    local faceColor = (kind == "primary")
+        and Color3.fromRGB(29, 115, 223)
+        or  Color3.fromRGB(45, 45, 55)
+    local edgeColor = (kind == "primary")
+        and Color3.fromRGB(136, 201, 255)
+        or  Color3.fromRGB(116, 116, 141)
+
+    local face = Instance.new("Frame")
+    face.Name             = "Face"
+    face.BorderSizePixel  = 0
+    face.BackgroundColor3 = faceColor
+    face.Size             = UDim2.new(1, 0, 1, 0)
+    face.Parent           = button
+
+    local grad = Instance.new("UIGradient")
+    grad.Rotation = 90
+    grad.Color    = ColorSequence.new{
+        ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1.000, Color3.fromRGB(148, 148, 148)),
+    }
+    grad.Parent = face
+
+    local fStroke = Instance.new("UIStroke")
+    fStroke.Transparency = 0.25
+    fStroke.Thickness    = 1.2
+    fStroke.Color        = edgeColor
+    fStroke.Name         = "BtnStroke"
+    fStroke.Parent       = face
+
+    local sheen = Instance.new("Frame")
+    sheen.Name                 = "Sheen"
+    sheen.BorderSizePixel      = 0
+    sheen.BackgroundColor3     = Color3.fromRGB(255, 255, 255)
+    sheen.BackgroundTransparency = 0.45
+    sheen.Size                 = UDim2.new(1, -6, 0, 1)
+    sheen.Position             = UDim2.new(0, 3, 0, 1)
+    sheen.Parent               = face
+
+    local shadow = Instance.new("Frame")
+    shadow.Name                 = "BtnShadow"
+    shadow.BorderSizePixel      = 0
+    shadow.BackgroundColor3     = Color3.fromRGB(0, 0, 0)
+    shadow.BackgroundTransparency = 0.45
+    shadow.Size                 = UDim2.new(1, -6, 0, 2)
+    shadow.Position             = UDim2.new(0, 3, 1, -3)
+    shadow.Parent               = face
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Name                 = "Label"
+    lbl.ZIndex               = 3
+    lbl.TextSize             = 13
+    lbl.TextColor3           = Color3.fromRGB(255, 255, 255)
+    lbl.BackgroundTransparency = 1
+    lbl.Size                 = UDim2.new(1, 0, 1, 0)
+    lbl.Text                 = text or "Button"
+    lbl.TextStrokeTransparency = 0.7
+    lbl.Parent               = button
+    setFont(lbl, Enum.FontWeight.Bold)
+
+    button.MouseEnter:Connect(function()
+        pcallDo(function()
+            TweenService:Create(face, TweenInfo.new(0.15),
+                { BackgroundColor3 = faceColor:Lerp(Color3.new(1,1,1), 0.12) }):Play()
+        end)
+    end)
+    button.MouseLeave:Connect(function()
+        pcallDo(function()
+            TweenService:Create(face, TweenInfo.new(0.15),
+                { BackgroundColor3 = faceColor }):Play()
+        end)
+    end)
+    button.MouseButton1Click:Connect(function()
+        if type(callback) == "function" then pcallDo(callback) end
+    end)
+
+    return button
+end
+
+--====================================================================
+-- Tab:CreateToggle(text, default, callback)
+--====================================================================
+function Tab:CreateToggle(text, default, callback)
+    self._order = self._order + 1
+    local state = default == true
+
+    local row = Instance.new("Frame")
+    row.Name             = "ToggleRow"
+    row.BorderSizePixel  = 0
+    row.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+    row.Size             = UDim2.new(1, 0, 0, 40)
+    row.LayoutOrder      = self._order
+    row.Parent           = self.Content
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Transparency    = 0.6
+    stroke.Color           = Color3.fromRGB(91, 91, 109)
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent          = row
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Name                 = "Label"
+    lbl.ZIndex               = 2
+    lbl.TextSize             = 12
+    lbl.TextXAlignment       = Enum.TextXAlignment.Left
+    lbl.TextColor3           = Color3.fromRGB(236, 236, 246)
+    lbl.BackgroundTransparency = 1
+    lbl.Size                 = UDim2.new(1, -70, 1, 0)
+    lbl.Position             = UDim2.new(0, 13, 0, 0)
+    lbl.Text                 = text or "Toggle"
+    lbl.Parent               = row
+    setFont(lbl, Enum.FontWeight.Medium)
+
+    local btn = Instance.new("TextButton")
+    btn.Name             = "ToggleBtn"
+    btn.AutoButtonColor  = false
+    btn.ZIndex           = 2
+    btn.Size             = UDim2.new(0, 44, 0, 22)
+    btn.Position         = UDim2.new(1, -56, 0.5, -11)
+    btn.Text             = ""
+    btn.BackgroundColor3 = state and Color3.fromRGB(29, 117, 225) or Color3.fromRGB(70, 70, 82)
+    btn.Parent           = row
+
+    local btnStroke = Instance.new("UIStroke")
+    btnStroke.Transparency = 0.5
+    btnStroke.Parent       = btn
+
+    local knob = Instance.new("Frame")
+    knob.Name             = "Knob"
+    knob.ZIndex           = 3
+    knob.BorderSizePixel  = 0
+    knob.BackgroundColor3 = Color3.fromRGB(251, 251, 255)
+    knob.Size             = UDim2.new(0, 18, 0, 18)
+    knob.Position         = state and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
+    knob.Parent           = btn
+
+    local knobStroke = Instance.new("UIStroke")
+    knobStroke.Transparency = 0.55
+    knobStroke.Parent       = knob
+
+    local function render()
+        local tColor = state and Color3.fromRGB(29, 117, 225) or Color3.fromRGB(70, 70, 82)
+        local tPos   = state and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
+        pcallDo(function()
+            TweenService:Create(btn, TweenInfo.new(0.18), { BackgroundColor3 = tColor }):Play()
+            TweenService:Create(knob, TweenInfo.new(0.18, Enum.EasingStyle.Quad), { Position = tPos }):Play()
+        end)
+    end
+
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        render()
+        if type(callback) == "function" then
+            pcallDo(function() callback(state) end)
+        end
+    end)
+
+    return {
+        Frame = row,
+        Get   = function() return state end,
+        Set   = function(v) state = v == true; render() end,
+    }
+end
+
+--====================================================================
+-- Tab:CreateSlider(text, min, max, default, callback)
+--====================================================================
+function Tab:CreateSlider(text, min, max, default, callback)
+    self._order = self._order + 1
+    min     = tonumber(min) or 0
+    max     = tonumber(max) or 100
+    default = tonumber(default) or min
+    if max <= min then max = min + 1 end
+
+    local value = math.clamp(default, min, max)
+
+    local card = Instance.new("Frame")
+    card.Name             = "Slider"
+    card.BorderSizePixel  = 0
+    card.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+    card.Size             = UDim2.new(1, 0, 0, 52)
+    card.LayoutOrder      = self._order
+    card.Parent           = self.Content
+
+    local cardStroke = Instance.new("UIStroke")
+    cardStroke.Transparency    = 0.6
+    cardStroke.Color           = Color3.fromRGB(91, 91, 109)
+    cardStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    cardStroke.Parent          = card
+
+    local vLabel = Instance.new("TextLabel")
+    vLabel.Name                 = "ValueLabel"
+    vLabel.ZIndex               = 2
+    vLabel.TextSize             = 11
+    vLabel.TextXAlignment       = Enum.TextXAlignment.Left
+    vLabel.TextColor3           = Color3.fromRGB(236, 236, 246)
+    vLabel.BackgroundTransparency = 1
+    vLabel.Size                 = UDim2.new(1, -24, 0, 18)
+    vLabel.Position             = UDim2.new(0, 13, 0, 7)
+    vLabel.Text                 = string.format("%s: %d", text or "Value", value)
+    vLabel.Parent               = card
+    setFont(vLabel, Enum.FontWeight.Medium)
+
+    local bar = Instance.new("Frame")
+    bar.Name             = "Bar"
+    bar.ZIndex           = 2
+    bar.BorderSizePixel  = 0
+    bar.BackgroundColor3 = Color3.fromRGB(57, 57, 67)
+    bar.Size             = UDim2.new(1, -26, 0, 8)
+    bar.Position         = UDim2.new(0, 13, 0, 33)
+    bar.Parent           = card
+
+    local barStroke = Instance.new("UIStroke")
+    barStroke.Transparency    = 0.35
+    barStroke.Color           = Color3.fromRGB(89, 89, 105)
+    barStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    barStroke.Parent          = bar
+
+    local fill = Instance.new("Frame")
+    fill.Name             = "Fill"
+    fill.ZIndex           = 3
+    fill.BorderSizePixel  = 0
+    fill.BackgroundColor3 = Color3.fromRGB(65, 133, 233)
+    fill.Size             = UDim2.new(0, 0, 1, 0)
+    fill.Parent           = bar
+
+    local knob = Instance.new("TextButton")
+    knob.Name             = "Knob"
+    knob.BorderSizePixel  = 0
+    knob.AutoButtonColor  = false
+    knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    knob.ZIndex           = 5
+    knob.AnchorPoint      = Vector2.new(0.5, 0.5)
+    knob.Size             = UDim2.new(0, 16, 0, 16)
+    knob.Position         = UDim2.new(0, 0, 0.5, 0)
+    knob.Text             = ""
+    knob.Parent           = bar
+
+    local knobStroke = Instance.new("UIStroke")
+    knobStroke.Transparency = 0.35
+    knobStroke.Color        = Color3.fromRGB(19, 19, 25)
+    knobStroke.Parent       = knob
+
+    local knobCorner = Instance.new("UICorner")
+    knobCorner.CornerRadius = UDim.new(1, 0)
+    knobCorner.Parent       = knob
+
+    local function applyValue(v, fire)
+        v = math.clamp(v, min, max)
+        local alpha = (v - min) / (max - min)
+        fill.Size     = UDim2.new(alpha, 0, 1, 0)
+        knob.Position = UDim2.new(alpha, 0, 0.5, 0)
+        value         = math.floor(v + 0.5)
+        vLabel.Text   = string.format("%s: %d", text or "Value", value)
+        if fire and type(callback) == "function" then
+            pcallDo(function() callback(value) end)
+        end
+    end
+
+    applyValue(value, false)
+
+    local dragging = false
+    local function doInput(input)
+        local relX = (input.Position.X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X
+        relX = math.clamp(relX, 0, 1)
+        applyValue(min + (max - min) * relX, true)
+    end
+
+    knob.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+        end
+    end)
+
+    bar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            pcallDo(function() doInput(input) end)
+        end
+    end)
+
+    UIS.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+                      or input.UserInputType == Enum.UserInputType.Touch) then
+            pcallDo(function() doInput(input) end)
+        end
+    end)
+
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    return {
+        Frame = card,
+        Get   = function() return value end,
+        Set   = function(v) applyValue(v, true) end,
+    }
+end
+
+--====================================================================
+-- Global exposure (executor-friendly)
+--====================================================================
+pcall(function() _G.Krein = Krein end)
+pcall(function() getgenv().Krein = Krein end)
+pcall(function() if getgenv then getgenv().Krein = Krein end end)
+
+return Krein
