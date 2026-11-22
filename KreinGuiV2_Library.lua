@@ -4699,27 +4699,33 @@ local function buildOriginalGui(parentGui, options)
     	local minimized = false
     	local busy = false
     	
-    	local function collectFades(root)
-    		local items = {}
-    		for _, d in ipairs(root:GetDescendants()) do
-    			if d:IsA("TextLabel") or d:IsA("TextButton") or d:IsA("TextBox") then
-    				table.insert(items, {o = d, p = "TextTransparency", b = d.TextTransparency})
-    				if d:IsA("TextButton") then
-    					table.insert(items, {o = d, p = "BackgroundTransparency", b = d.BackgroundTransparency})
-    				end
-    			elseif d:IsA("ImageLabel") or d:IsA("ImageButton") then
-    				table.insert(items, {o = d, p = "ImageTransparency", b = d.ImageTransparency})
-    				table.insert(items, {o = d, p = "BackgroundTransparency", b = d.BackgroundTransparency})
-    			elseif d:IsA("Frame") or d:IsA("ScrollingFrame") then
-    				table.insert(items, {o = d, p = "BackgroundTransparency", b = d.BackgroundTransparency})
-    			elseif d:IsA("UIStroke") then
-    				table.insert(items, {o = d, p = "Transparency", b = d.Transparency})
-    			end
-    		end
-    		return items
-    	end
-    	
-    	local function setFade(items, t)
+	-- Keep original transparency values across repeated tab switches.
+	local fadeBases = setmetatable({}, {__mode = "k"})
+	local function collectFades(root)
+		local items = {}
+		local function add(obj, prop)
+			local props = fadeBases[obj]
+			if not props then props = {}; fadeBases[obj] = props end
+			if props[prop] == nil then
+				local ok, value = pcall(function() return obj[prop] end)
+				if ok then props[prop] = value end
+			end
+			if props[prop] ~= nil then table.insert(items, {o = obj, p = prop, b = props[prop]}) end
+		end
+		for _, d in ipairs(root:GetDescendants()) do
+			if d:IsA("TextLabel") or d:IsA("TextButton") or d:IsA("TextBox") then
+				add(d, "TextTransparency")
+				if d:IsA("TextButton") then add(d, "BackgroundTransparency") end
+			elseif d:IsA("ImageLabel") or d:IsA("ImageButton") then
+				add(d, "ImageTransparency"); add(d, "BackgroundTransparency")
+			elseif d:IsA("Frame") or d:IsA("ScrollingFrame") then add(d, "BackgroundTransparency")
+			elseif d:IsA("UIStroke") then add(d, "Transparency")
+			end
+		end
+		return items
+	end
+	
+	local function setFade(items, t)
     		for _, it in ipairs(items) do
     			local ok = pcall(function() it.o[it.p] = it.b + (1 - it.b) * t end)
     		end
